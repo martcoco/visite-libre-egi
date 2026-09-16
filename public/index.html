@@ -194,6 +194,7 @@
       <div class="check">✅</div>
       <h2 data-i18n="succes-titre">Merci !</h2>
       <p data-i18n="succes-texte">La fiche complète de la propriété vous sera envoyée par courriel sous peu.<br>Bonne visite !</p>
+      <button type="button" id="btn-nouvelle-inscription" data-i18n="btn-nouvelle" style="margin-top:18px;">Nouvelle inscription</button>
     </div>
   </div>
 </div>
@@ -240,8 +241,10 @@
       'btn-submit-envoi': 'Envoi en cours…',
       'err-generique': 'Une erreur est survenue. Veuillez réessayer ou parler à votre courtier sur place.',
       'err-represente': "Merci d'indiquer si vous êtes représenté(e) par un courtier.",
+      'err-consent': "Merci de cocher la première case (obligatoire) pour continuer.",
       'succes-titre': 'Merci !',
-      'succes-texte': 'La fiche complète de la propriété vous sera envoyée par courriel sous peu.<br>Bonne visite !'
+      'succes-texte': 'La fiche complète de la propriété vous sera envoyée par courriel sous peu.<br>Bonne visite !',
+      'btn-nouvelle': 'Nouvelle inscription'
     },
     en: {
       'lbl-langue': 'Preferred language',
@@ -260,8 +263,10 @@
       'btn-submit-envoi': 'Sending…',
       'err-generique': 'An error occurred. Please try again or speak with the agent on-site.',
       'err-represente': 'Please indicate whether you are represented by a broker.',
+      'err-consent': 'Please check the first box (required) to continue.',
       'succes-titre': 'Thank you!',
-      'succes-texte': "The complete property info sheet will be emailed to you shortly.<br>Enjoy your visit!"
+      'succes-texte': "The complete property info sheet will be emailed to you shortly.<br>Enjoy your visit!",
+      'btn-nouvelle': 'New sign-in'
     },
     zh: {
       'lbl-langue': '首选语言',
@@ -280,8 +285,10 @@
       'btn-submit-envoi': '发送中…',
       'err-generique': '发生错误，请重试或联系现场经纪人。',
       'err-represente': '请说明您是否由经纪人代理。',
+      'err-consent': '请勾选第一项（必填）以继续。',
       'succes-titre': '谢谢！',
-      'succes-texte': '房源完整资料将很快通过电子邮件发送给您。<br>祝参观愉快！'
+      'succes-texte': '房源完整资料将很快通过电子邮件发送给您。<br>祝参观愉快！',
+      'btn-nouvelle': '新登记'
     }
   };
   let currentLang = 'fr';
@@ -317,6 +324,13 @@
     if (!representeChoisi) {
       errorMsg.textContent = TRANSLATIONS[currentLang]['err-represente'];
       errorMsg.style.display = 'block';
+      return;
+    }
+    const consentRequiredBox = document.getElementById('consent-required');
+    if (!consentRequiredBox.checked) {
+      errorMsg.textContent = TRANSLATIONS[currentLang]['err-consent'];
+      errorMsg.style.display = 'block';
+      consentRequiredBox.focus();
       return;
     }
     errorMsg.textContent = TRANSLATIONS[currentLang]['err-generique'];
@@ -355,6 +369,26 @@
       btn.disabled = false;
       btn.textContent = TRANSLATIONS[currentLang]['btn-submit'];
     }
+  });
+
+  function resetForm() {
+    document.getElementById('firstName').value = '';
+    document.getElementById('lastName').value = '';
+    document.getElementById('email').value = '';
+    document.getElementById('phone').value = '';
+    document.querySelectorAll('input[name="represente"]').forEach(function (r) { r.checked = false; });
+    document.getElementById('consent-required').checked = false;
+    document.getElementById('consent-marketing').checked = false;
+    document.getElementById('consent-dv').checked = false;
+    errorMsg.style.display = 'none';
+    btn.disabled = false;
+    btn.textContent = TRANSLATIONS[currentLang]['btn-submit'];
+  }
+
+  document.getElementById('btn-nouvelle-inscription').addEventListener('click', function () {
+    resetForm();
+    document.getElementById('success-view').hidden = true;
+    document.getElementById('form-view').hidden = false;
   });
 </script>
 
