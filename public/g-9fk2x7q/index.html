@@ -299,16 +299,6 @@
           <div class="hint">Sert seulement à l'affiche et au courriel. Laissée vide, l'affiche indique « Propriété — MLS [numéro] ».</div>
           <div class="field-error">Si tu entres une adresse, écris-la au complet (pas juste un mot).</div>
         </div>
-        <div class="field" id="field-fiche">
-          <label>Lien vers l'annonce sur enduranceimmobilier.com</label>
-          <input type="text" id="f-fiche" placeholder="https://enduranceimmobilier.com/proprietes/.../26759159/">
-          <div class="fiche-locked" id="fiche-locked" style="display:none;">
-            <span class="fiche-locked-value" id="fiche-locked-value"></span>
-            <button type="button" id="btn-fiche-corriger">Corriger</button>
-          </div>
-          <div class="hint">Le lien vers la PAGE de l'annonce sur le site (pas un PDF) — inclus en plus dans le courriel automatique, pour que le visiteur puisse voir l'annonce en ligne.</div>
-        </div>
-
         <button type="submit" class="primary" id="btn-verifier">Vérifier les informations</button>
       </form>
 
@@ -319,8 +309,14 @@
           <dt>MLS</dt><dd id="confirm-mls"></dd>
           <dt>Courtier</dt><dd id="confirm-courtier"></dd>
         </dl>
-        <div id="confirm-fiche-row" style="display:none; margin:-6px 0 14px; font-size:12.5px; color:var(--ink-soft); word-break:break-all;">
-          Lien fiche : <span id="confirm-fiche" style="color:var(--ink);"></span>
+        <div class="field" id="field-fiche" style="margin-top:2px;">
+          <label>Lien vers l'annonce sur enduranceimmobilier.com</label>
+          <input type="text" id="f-fiche" placeholder="https://enduranceimmobilier.com/proprietes/.../26759159/">
+          <div class="fiche-locked" id="fiche-locked" style="display:none;">
+            <span class="fiche-locked-value" id="fiche-locked-value"></span>
+            <button type="button" id="btn-fiche-corriger">Corriger</button>
+          </div>
+          <div class="hint">Le lien vers la PAGE de l'annonce sur le site (pas un PDF) — inclus en plus dans le courriel automatique, pour que le visiteur puisse voir l'annonce en ligne. Colle-le ici avant de confirmer.</div>
         </div>
         <div class="confirm-actions">
           <button type="button" id="btn-modifier">Modifier</button>
@@ -358,6 +354,7 @@
       <div class="actions" id="sign-actions" style="display:none;">
         <button id="btn-print">Imprimer / PDF</button>
         <button id="btn-copy">Copier le lien</button>
+        <button id="btn-indice">Fiche Indice Tardif</button>
       </div>
       <div id="copy-msg" style="display:none; margin:0 16px 16px; font-size:12.5px; color:var(--ink-soft);"></div>
       <div style="margin:0 16px 16px;">
@@ -411,6 +408,10 @@
 
   // Domaine du formulaire de saisie client — fixe, rien à configurer ici.
   var VISITE_LIBRE_DOMAIN = 'https://visite.egi.immo';
+
+  // Bulletin Indice Tardif du mois, prêt à imprimer en même temps que
+  // l'affiche — fichier statique, mis à jour manuellement chaque mois.
+  var INDICE_TARDIF_PDF_URL = 'https://visite.egi.immo/g-9fk2x7q/indice-tardif.pdf';
 
   function buildUrl(domaine, adresse, mls, courtier, fiche) {
     var base = (domaine || '').trim() || VISITE_LIBRE_DOMAIN;
@@ -482,22 +483,6 @@
     var linkDisplay = document.getElementById('link-display');
     if (linkDisplay) linkDisplay.value = item.url;
     renderQr(qrTarget, item.url, 200);
-    var estAdresseGenerique = item.adresse === ('Propriété — MLS ' + item.mls);
-    document.getElementById('f-adresse').value = estAdresseGenerique ? '' : item.adresse;
-    document.getElementById('f-mls').value = item.mls;
-    document.getElementById('f-fiche').value = item.fiche || '';
-    if (item.fiche) { lockFicheIfFilled(); } else { showFicheEditable(); }
-    var select = document.getElementById('f-courtier');
-    var autre = document.getElementById('f-courtier-autre');
-    var match = Array.prototype.some.call(select.options, function (o) { return o.value === item.courtier; });
-    if (match) {
-      select.value = item.courtier;
-      autre.style.display = 'none';
-    } else {
-      select.value = '__autre__';
-      autre.style.display = 'block';
-      autre.value = item.courtier;
-    }
   }
 
   // ====== Verrouillage du champ "Lien vers l'annonce" après saisie ======
@@ -565,29 +550,40 @@
     return adresse || ('Propriété — MLS ' + mls);
   }
 
+  // Remet le formulaire à vide après la génération d'une affiche, pour
+  // laisser la place à la prochaine propriété.
+  function resetForm() {
+    document.getElementById('f-mls').value = '';
+    document.getElementById('f-adresse').value = '';
+    courtierSelect.value = '';
+    courtierAutre.value = '';
+    courtierAutre.style.display = 'none';
+    setError('field-adresse', false);
+    setError('field-mls', false);
+    setError('field-courtier', false);
+    document.getElementById('f-mls').focus();
+  }
+
   form.addEventListener('submit', function (e) {
     e.preventDefault();
     var adresse = document.getElementById('f-adresse').value.trim();
     var mls = document.getElementById('f-mls').value.trim();
     var courtier = resolveCourtier();
-    var fiche = document.getElementById('f-fiche').value.trim();
 
     if (!validate(adresse, mls, courtier)) { confirmBox.style.display = 'none'; return; }
 
     var adresseFinale = adresseAffichee(adresse, mls);
-    pending = { adresse: adresseFinale, mls: mls, courtier: courtier, fiche: fiche, domaine: VISITE_LIBRE_DOMAIN };
+    pending = { adresse: adresseFinale, mls: mls, courtier: courtier, domaine: VISITE_LIBRE_DOMAIN };
     document.getElementById('confirm-adresse').textContent = adresseFinale;
     document.getElementById('confirm-mls').textContent = mls;
     document.getElementById('confirm-courtier').textContent = courtier;
-    var ficheRow = document.getElementById('confirm-fiche-row');
-    if (fiche) {
-      document.getElementById('confirm-fiche').textContent = fiche;
-      ficheRow.style.display = '';
-    } else {
-      ficheRow.style.display = 'none';
-    }
+    // Le lien vers l'annonce se saisit ici, au moment de la vérification —
+    // pas dans le formulaire principal.
+    ficheInput.value = '';
+    showFicheEditable();
     confirmBox.style.display = 'block';
     confirmBox.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    ficheInput.focus();
   });
 
   document.getElementById('btn-modifier').addEventListener('click', function () {
@@ -597,13 +593,19 @@
 
   document.getElementById('btn-confirmer').addEventListener('click', function () {
     if (!pending) return;
-    var url = buildUrl(pending.domaine, pending.adresse, pending.mls, pending.courtier, pending.fiche);
-    var item = { adresse: pending.adresse, mls: pending.mls, courtier: pending.courtier, fiche: pending.fiche, url: url };
+    var fiche = ficheInput.value.trim();
+    var url = buildUrl(pending.domaine, pending.adresse, pending.mls, pending.courtier, fiche);
+    var item = { adresse: pending.adresse, mls: pending.mls, courtier: pending.courtier, fiche: fiche, url: url };
     items.push(item);
     showSign(item);
     renderList();
     confirmBox.style.display = 'none';
     pending = null;
+    resetForm();
+  });
+
+  document.getElementById('btn-indice').addEventListener('click', function () {
+    window.open(INDICE_TARDIF_PDF_URL, '_blank');
   });
 
   // Champ lien manuel : sélection auto au focus/clic, pour un Ctrl/Cmd+C
