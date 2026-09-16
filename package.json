@@ -1,0 +1,16 @@
+{
+  "name": "visite-libre-egi",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Formulaire d'inscription visite libre - Endurance Groupe Immobilier par Tardif",
+  "main": "src/server.js",
+  "scripts": {
+    "start": "node src/server.js"
+  },
+  "engines": {
+    "node": ">=22"
+  },
+  "dependencies": {
+    "express": "^4.19.2"
+  }
+}

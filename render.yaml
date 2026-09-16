@@ -1,0 +1,16 @@
+services:
+  - type: web
+    name: visite-libre-egi
+    runtime: docker
+    repo: https://github.com/martcoco/visite-libre-egi
+    plan: starter
+    healthCheckPath: /ping
+    domains:
+      - visite.egi.immo
+    dockerContext: .
+    dockerfilePath: ./Dockerfile
+    envVars:
+      - key: PORT
+        value: 3000
+      - key: BASE_URL
+        value: https://visite.egi.immo
