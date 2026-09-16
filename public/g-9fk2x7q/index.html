@@ -1,0 +1,754 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="robots" content="noindex, nofollow, noarchive"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#faf9f5;color:#141413}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<title>Générateur de visite libre</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600&family=Work+Sans:wght@400;500;600;700&display=swap">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<style>
+  :root {
+    --bg: #f5f3ec;
+    --surface: #ffffff;
+    --surface-2: #efeee4;
+    --ink: #1c231f;
+    --ink-soft: #5c6459;
+    --line: #dfdccb;
+    --green: #0b3d2e;
+    --green-deep: #082a20;
+    --green-tint: #e7efe9;
+    --accent: #a97d34;
+    --accent-tint: #f3e6cd;
+    --danger: #ad3b32;
+    --font-display: 'Fraunces', Georgia, 'Times New Roman', serif;
+    --font-body: 'Work Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #12160f;
+      --surface: #1b2118;
+      --surface-2: #212820;
+      --ink: #edece3;
+      --ink-soft: #a7ad9d;
+      --line: #313a2c;
+      --green: #5fbb92;
+      --green-deep: #4aa07c;
+      --green-tint: #1c2b23;
+      --accent: #d9b06a;
+      --accent-tint: #2c2517;
+      --danger: #e0857c;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #12160f;
+    --surface: #1b2118;
+    --surface-2: #212820;
+    --ink: #edece3;
+    --ink-soft: #a7ad9d;
+    --line: #313a2c;
+    --green: #5fbb92;
+    --green-deep: #4aa07c;
+    --green-tint: #1c2b23;
+    --accent: #d9b06a;
+    --accent-tint: #2c2517;
+    --danger: #e0857c;
+  }
+
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--bg); color: var(--ink);
+    font-family: var(--font-body); font-size: 15px; line-height: 1.5;
+    padding: 32px 16px 64px;
+  }
+  .wrap { max-width: 1040px; margin: 0 auto; }
+
+  header.page { margin-bottom: 28px; }
+  .eyebrow { font-size: 12px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--green); font-weight: 600; }
+  h1 { font-family: var(--font-display); font-weight: 600; font-size: clamp(26px, 4vw, 34px); margin: 4px 0 6px; text-wrap: balance; }
+  .lede { color: var(--ink-soft); max-width: 62ch; margin: 0; }
+
+  .layout { display: grid; grid-template-columns: 1.1fr 1fr; gap: 24px; align-items: start; }
+  @media (max-width: 760px) { .layout { grid-template-columns: 1fr; } }
+
+  .panel { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 24px; }
+  .panel h2 { font-family: var(--font-display); font-size: 18px; font-weight: 600; margin: 0 0 16px; }
+
+  .field { margin-bottom: 16px; }
+  .field label { display: block; font-size: 12.5px; font-weight: 600; color: var(--ink-soft); margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.03em; }
+  .field .req { color: var(--danger); }
+  .field input, .field select {
+    width: 100%; padding: 10px 12px; border: 1px solid var(--line); border-radius: 8px;
+    background: var(--surface); color: var(--ink); font-family: var(--font-body); font-size: 14.5px;
+  }
+  .field input:focus, .field select:focus { outline: 2px solid var(--green); outline-offset: 1px; }
+  .field .hint { font-size: 12px; color: var(--ink-soft); margin-top: 4px; }
+  .row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  @media (max-width: 480px) { .row2 { grid-template-columns: 1fr; } }
+
+  button.primary {
+    width: 100%; background: var(--green); color: var(--green-tint); border: none;
+    padding: 13px; border-radius: 9px; font-family: var(--font-body); font-weight: 600; font-size: 15px;
+    cursor: pointer; margin-top: 4px;
+  }
+  button.primary:hover { background: var(--green-deep); }
+
+  /* Sign preview */
+  .sign {
+    background: var(--surface); border: 1px solid var(--line); border-radius: 14px;
+    overflow: hidden; position: sticky; top: 24px;
+  }
+  .sign .placeholder { color: var(--ink-soft); font-size: 14px; padding: 60px 12px; text-align: center; }
+
+  /* ---- Affiche imprimable : look "site web" (bandeau vert, accent or) ---- */
+  #print-sign { background: #fff; color: #1c231f; text-align: center; }
+  .aff-topband {
+    background: #0b3d2e; color: #fff; padding: 22px 20px 20px;
+  }
+  .aff-brand {
+    font-size: 11px; letter-spacing: 0.14em; text-transform: uppercase;
+    color: #cfe3d8; margin-bottom: 8px;
+  }
+  .aff-welcome {
+    font-family: var(--font-display); font-weight: 600; font-size: 30px;
+    color: #fff; margin: 0 0 8px; text-wrap: balance;
+  }
+  .aff-instructions {
+    font-size: 13.5px; color: #e4ede8; line-height: 1.5; max-width: 320px; margin: 0 auto;
+  }
+  .aff-body { padding: 26px 24px 22px; }
+  .aff-addr { font-family: var(--font-display); font-weight: 600; font-size: 19px; color: #1c231f; margin-bottom: 2px; text-wrap: balance; }
+  .aff-mls { font-size: 12.5px; color: #8a8f86; font-variant-numeric: tabular-nums; margin-bottom: 20px; letter-spacing: 0.02em; }
+  .aff-qr-frame {
+    display: inline-block; padding: 16px; border: 2px solid #a97d34; border-radius: 14px; margin-bottom: 10px;
+  }
+  .aff-qr-frame .qr-box > div { line-height: 0; }
+  .aff-scan-label {
+    display: inline-block; margin: 12px auto 18px; background: #f3e6cd; color: #6b4e1f;
+    font-weight: 600; font-size: 12.5px; padding: 6px 14px; border-radius: 999px; letter-spacing: 0.03em;
+  }
+  .aff-steps { display: flex; justify-content: center; gap: 18px; margin: 4px 0 22px; flex-wrap: wrap; }
+  .aff-step { font-size: 11.5px; color: #5c6459; max-width: 92px; }
+  .aff-step span {
+    display: flex; align-items: center; justify-content: center; margin: 0 auto 5px;
+    width: 22px; height: 22px; border-radius: 50%; background: #0b3d2e; color: #fff; font-weight: 700; font-size: 12px;
+  }
+  .aff-footer {
+    background: #f5f3ec; border-top: 1px solid #e5e1d1; padding: 16px 20px;
+  }
+  .aff-footer .courtier { font-weight: 700; font-size: 14.5px; color: #0b3d2e; margin-bottom: 3px; }
+  .aff-footer .nap { font-size: 11.5px; color: #6b7268; line-height: 1.5; }
+
+  .actions { display: flex; gap: 10px; margin-top: 16px; flex-wrap: wrap; }
+  .actions button {
+    flex: 1; min-width: 130px; padding: 10px 12px; border-radius: 8px; font-family: var(--font-body);
+    font-weight: 600; font-size: 13.5px; cursor: pointer; border: 1px solid var(--line); background: var(--surface-2); color: var(--ink);
+  }
+  .actions button:hover { border-color: var(--green); }
+  .actions button.copied { background: var(--green-tint); border-color: var(--green); color: var(--green-deep); }
+
+  /* Session list */
+  .list-section { margin-top: 32px; }
+  .list-section h2 { font-family: var(--font-display); font-size: 18px; font-weight: 600; margin: 0 0 4px; }
+  .list-section .hint { color: var(--ink-soft); font-size: 13px; margin: 0 0 14px; }
+  .vl-list { display: flex; flex-direction: column; gap: 10px; }
+  .vl-row {
+    display: flex; align-items: center; gap: 14px; background: var(--surface); border: 1px solid var(--line);
+    border-radius: 10px; padding: 12px 14px;
+  }
+  .vl-row .mini-qr { flex-shrink: 0; }
+  .vl-row .mini-qr > div { padding: 4px; background: #fff; border-radius: 6px; line-height: 0; }
+  .vl-row .info { flex: 1; min-width: 0; }
+  .vl-row .info .a { font-weight: 600; font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .vl-row .info .b { font-size: 12.5px; color: var(--ink-soft); font-variant-numeric: tabular-nums; }
+  .vl-row .row-actions { display: flex; gap: 6px; flex-shrink: 0; }
+  .vl-row .row-actions button {
+    padding: 7px 10px; font-size: 12.5px; border-radius: 7px; border: 1px solid var(--line);
+    background: var(--surface-2); color: var(--ink); font-family: var(--font-body); font-weight: 600; cursor: pointer;
+  }
+  .empty { color: var(--ink-soft); font-size: 13.5px; padding: 18px 4px; }
+
+  .field-error { color: var(--danger); font-size: 12px; margin-top: 4px; display: none; }
+  .field.has-error input { border-color: var(--danger); }
+  .field.has-error .field-error { display: block; }
+
+  .fiche-locked {
+    display: flex; align-items: center; gap: 10px; padding: 10px 12px;
+    border: 1px solid var(--line); border-radius: 8px; background: var(--surface-2);
+  }
+  .fiche-locked .fiche-locked-value {
+    flex: 1; min-width: 0; font-size: 13.5px; color: var(--ink);
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
+  .fiche-locked button {
+    flex-shrink: 0; padding: 6px 12px; font-size: 12.5px; font-weight: 600;
+    border: 1px solid var(--line); border-radius: 7px; background: var(--surface);
+    color: var(--ink); cursor: pointer;
+  }
+  .fiche-locked button:hover { border-color: var(--green); }
+
+  /* Confirmation step */
+  .confirm-box {
+    background: var(--accent-tint); border: 1px solid var(--accent); border-radius: 10px;
+    padding: 16px 18px; margin-top: 16px;
+  }
+  .confirm-box h3 { font-family: var(--font-display); font-size: 15px; margin: 0 0 10px; }
+  .confirm-box dl { display: grid; grid-template-columns: auto 1fr; gap: 4px 12px; margin: 0 0 14px; font-size: 13.5px; }
+  .confirm-box dt { color: var(--ink-soft); }
+  .confirm-box dd { margin: 0; font-weight: 600; }
+  .confirm-actions { display: flex; gap: 10px; }
+  .confirm-actions button { flex: 1; padding: 10px; border-radius: 8px; font-family: var(--font-body); font-weight: 600; font-size: 14px; cursor: pointer; border: 1px solid var(--line); }
+  #btn-modifier { background: var(--surface); color: var(--ink); }
+  #btn-confirmer { background: var(--green); color: var(--green-tint); border: none; }
+
+  /* Access gate */
+  .gate {
+    position: fixed; inset: 0; background: var(--bg); display: flex; align-items: center; justify-content: center;
+    padding: 24px; z-index: 20;
+  }
+  .gate-card { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 28px; max-width: 340px; width: 100%; text-align: center; }
+  .gate-card h2 { font-family: var(--font-display); font-size: 19px; margin: 0 0 6px; }
+  .gate-card p { color: var(--ink-soft); font-size: 13.5px; margin: 0 0 16px; }
+  .gate-card input { width: 100%; padding: 11px 12px; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); color: var(--ink); font-size: 15px; text-align: center; letter-spacing: 0.08em; margin-bottom: 10px; }
+  .gate-card button { width: 100%; background: var(--green); color: var(--green-tint); border: none; padding: 11px; border-radius: 8px; font-weight: 600; cursor: pointer; }
+  .gate-error { color: var(--danger); font-size: 12.5px; margin-top: 8px; display: none; }
+
+  /* Paramètres avancés (repliable) */
+  details.advanced { margin-top: 18px; border-top: 1px solid var(--line); padding-top: 14px; }
+  details.advanced summary { cursor: pointer; font-size: 12.5px; font-weight: 600; color: var(--ink-soft); text-transform: uppercase; letter-spacing: 0.03em; }
+  details.advanced .field { margin-top: 14px; }
+
+  @media print {
+    body * { visibility: hidden; }
+    #print-sign, #print-sign * { visibility: visible; }
+    #print-sign {
+      position: fixed; inset: 0; margin: 0; border: none; border-radius: 0;
+      display: flex; flex-direction: column; justify-content: center;
+    }
+    .actions { display: none; }
+    .aff-topband { padding: 70px 60px 55px; }
+    .aff-brand { font-size: 13px; }
+    .aff-welcome { font-size: 46px; }
+    .aff-instructions { font-size: 16px; max-width: 440px; }
+    .aff-body { padding: 55px 60px 45px; }
+    .aff-addr { font-size: 28px; }
+    .aff-mls { font-size: 15px; margin-bottom: 34px; }
+    .aff-qr-frame { padding: 26px; }
+    .aff-scan-label { font-size: 15px; padding: 10px 22px; }
+    .aff-steps { gap: 36px; margin: 22px 0 34px; }
+    .aff-step { font-size: 14px; max-width: 130px; }
+    .aff-step span { width: 30px; height: 30px; font-size: 15px; }
+    .aff-footer { padding: 26px 60px; }
+    .aff-footer .courtier { font-size: 19px; }
+    .aff-footer .nap { font-size: 14px; }
+  }
+</style>
+
+<div class="gate" id="gate">
+  <div class="gate-card">
+    <h2>Accès équipe EGI</h2>
+    <p>Entre le code d'équipe pour préparer une visite libre.</p>
+    <input type="password" id="gate-code" placeholder="Code d'équipe" autocomplete="off">
+    <button id="gate-submit">Continuer</button>
+    <div class="gate-error" id="gate-error">Code incorrect — réessaie.</div>
+  </div>
+</div>
+
+<div class="wrap" id="main-content" style="display:none;">
+  <header class="page">
+    <div class="eyebrow">Endurance Groupe Immobilier par Tardif</div>
+    <h1>Préparer une visite libre</h1>
+    <p class="lede">Entrez l'adresse et le numéro MLS, imprimez l'affiche avec le code QR. Chaque visiteur qui scanne reçoit par courriel la fiche PDF et la DV en pièces jointes (déposées une fois par Claude dans le dossier Drive de la propriété), et devient automatiquement un contact FUB assigné au bon courtier — même quand plusieurs visites libres ont lieu en même temps.</p>
+  </header>
+
+  <div class="layout">
+    <div class="panel">
+      <h2>Détails de la propriété</h2>
+      <form id="vl-form">
+        <div class="row2">
+          <div class="field" id="field-mls">
+            <label>Numéro MLS <span class="req">*</span></label>
+            <input type="text" id="f-mls" placeholder="26759159" required inputmode="numeric">
+            <div class="field-error">Le numéro MLS doit contenir 7 à 9 chiffres — c'est le seul champ qui identifie la propriété dans FUB.</div>
+          </div>
+          <div class="field" id="field-courtier">
+            <label>Courtier de l'inscription <span class="req">*</span></label>
+            <select id="f-courtier">
+              <option value="" disabled selected>Choisir un courtier…</option>
+              <option>Anthony Berguio</option>
+              <option>Bo Zhang</option>
+              <option>Chiron McGonigle</option>
+              <option>Christian Bourassa</option>
+              <option>Danick Charpentier</option>
+              <option>David Tardif</option>
+              <option>Donovan Baudron</option>
+              <option>Elena &amp; Lora Odracci</option>
+              <option>Gaël André</option>
+              <option>Hiba Mellily</option>
+              <option>Johnny Sfeir</option>
+              <option>Louis-Victor Martin</option>
+              <option>Martin Rodrigue</option>
+              <option>Remy Achache</option>
+              <option>Sophie Ma</option>
+              <option value="__autre__">Autre (saisir un nom)…</option>
+            </select>
+            <input type="text" id="f-courtier-autre" placeholder="Nom complet du courtier" style="display:none; margin-top:8px;">
+            <div class="field-error">Choisis un courtier ou entre un nom complet (prénom + nom).</div>
+          </div>
+        </div>
+        <div class="field" id="field-adresse">
+          <label>Adresse <span style="text-transform:none; font-weight:400; color:var(--ink-soft);">(optionnel — le MLS suffit pour FUB)</span></label>
+          <input type="text" id="f-adresse" placeholder="805-807 Rue Melrose, Verdun">
+          <div class="hint">Sert seulement à l'affiche et au courriel. Laissée vide, l'affiche indique « Propriété — MLS [numéro] ».</div>
+          <div class="field-error">Si tu entres une adresse, écris-la au complet (pas juste un mot).</div>
+        </div>
+        <div class="field" id="field-fiche">
+          <label>Lien vers l'annonce sur enduranceimmobilier.com</label>
+          <input type="text" id="f-fiche" placeholder="https://enduranceimmobilier.com/proprietes/.../26759159/">
+          <div class="fiche-locked" id="fiche-locked" style="display:none;">
+            <span class="fiche-locked-value" id="fiche-locked-value"></span>
+            <button type="button" id="btn-fiche-corriger">Corriger</button>
+          </div>
+          <div class="hint">Le lien vers la PAGE de l'annonce sur le site (pas un PDF) — inclus en plus dans le courriel automatique, pour que le visiteur puisse voir l'annonce en ligne.</div>
+        </div>
+
+        <button type="submit" class="primary" id="btn-verifier">Vérifier les informations</button>
+      </form>
+
+      <div class="confirm-box" id="confirm-box" style="display:none;">
+        <h3>Confirme avant de générer</h3>
+        <dl>
+          <dt>Adresse</dt><dd id="confirm-adresse"></dd>
+          <dt>MLS</dt><dd id="confirm-mls"></dd>
+          <dt>Courtier</dt><dd id="confirm-courtier"></dd>
+        </dl>
+        <div id="confirm-fiche-row" style="display:none; margin:-6px 0 14px; font-size:12.5px; color:var(--ink-soft); word-break:break-all;">
+          Lien fiche : <span id="confirm-fiche" style="color:var(--ink);"></span>
+        </div>
+        <div class="confirm-actions">
+          <button type="button" id="btn-modifier">Modifier</button>
+          <button type="button" id="btn-confirmer">Confirmer et générer</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="sign" id="sign-panel">
+      <div id="sign-placeholder" class="placeholder">L'affiche apparaîtra ici une fois les champs remplis.</div>
+      <div id="print-sign" style="display:none;">
+        <div class="aff-topband">
+          <div class="aff-brand">Endurance Groupe Immobilier par Tardif</div>
+          <div class="aff-welcome">Bienvenue !</div>
+          <div class="aff-instructions">Merci de votre visite. SVP prenez un instant pour remplir le court formulaire d'inscription — vous recevrez la fiche complète de la propriété par courriel.</div>
+        </div>
+        <div class="aff-body">
+          <div class="aff-addr" id="out-adresse"></div>
+          <div class="aff-mls" id="out-mls"></div>
+          <div class="aff-qr-frame">
+            <div class="qr-box" id="qr-target"></div>
+          </div>
+          <div><span class="aff-scan-label">📱 Scannez pour vous inscrire</span></div>
+          <div class="aff-steps">
+            <div class="aff-step"><span>1</span>Ouvrez la caméra</div>
+            <div class="aff-step"><span>2</span>Scannez le code</div>
+            <div class="aff-step"><span>3</span>Remplissez vos infos</div>
+          </div>
+        </div>
+        <div class="aff-footer">
+          <div class="courtier" id="out-courtier"></div>
+          <div class="nap" id="out-contact">eXp Agence Immobilière</div>
+        </div>
+      </div>
+      <div class="actions" id="sign-actions" style="display:none;">
+        <button id="btn-print">Imprimer / PDF</button>
+        <button id="btn-copy">Copier le lien</button>
+      </div>
+      <div id="copy-msg" style="display:none; margin:0 16px 16px; font-size:12.5px; color:var(--ink-soft);"></div>
+      <div style="margin:0 16px 16px;">
+        <label style="display:block; font-size:11px; font-weight:600; color:var(--ink-soft); text-transform:uppercase; letter-spacing:0.03em; margin-bottom:4px;">Lien (copie manuelle si besoin)</label>
+        <input type="text" id="link-display" readonly style="width:100%; padding:8px 10px; border:1px solid var(--line); border-radius:7px; background:var(--surface-2); color:var(--ink); font-size:12.5px; font-family:monospace;">
+      </div>
+    </div>
+  </div>
+
+  <div class="list-section">
+    <h2>Visites libres préparées aujourd'hui</h2>
+    <p class="hint">Utile quand plusieurs visites libres tournent en même temps — chaque ligne a son propre lien et son propre QR, prêts à réimprimer.</p>
+    <div class="vl-list" id="vl-list">
+      <div class="empty">Aucune affiche générée pour l'instant.</div>
+    </div>
+  </div>
+</div>
+
+<script>
+(function () {
+  var form = document.getElementById('vl-form');
+  var placeholder = document.getElementById('sign-placeholder');
+  var printSign = document.getElementById('print-sign');
+  var signActions = document.getElementById('sign-actions');
+  var qrTarget = document.getElementById('qr-target');
+  var list = document.getElementById('vl-list');
+  var items = [];
+  var currentUrl = '';
+  var currentItem = null;
+
+  // ====== Téléphone + courriel par courtier (source : FUB > Équipe) ======
+  // Mise à jour manuelle si l'équipe change — demande à Claude de la
+  // resynchroniser avec FUB au besoin.
+  var COURTIER_CONTACTS = {
+    'Anthony Berguio': { phone: '514-708-6906', email: 'anthony@enduranceimmobilier.com' },
+    'Bo Zhang': { phone: '514-586-7988', email: 'bo@enduranceimmobilier.com' },
+    'Chiron McGonigle': { phone: '514-576-6020', email: 'chiron@enduranceimmobilier.com' },
+    'Christian Bourassa': { phone: '514-772-9246', email: 'christian@enduranceimmobilier.com' },
+    'Danick Charpentier': { phone: '514-233-9709', email: 'danick@enduranceimmobilier.com' },
+    'David Tardif': { phone: '514-975-8772', email: 'david@enduranceimmobilier.com' },
+    'Donovan Baudron': { phone: '819-430-8990', email: 'donovan@enduranceimmobilier.com' },
+    'Elena & Lora Odracci': { phone: '514-743-5473', email: 'elena@enduranceimmobilier.com' },
+    'Gaël André': { phone: '438-825-7952', email: 'gael@enduranceimmobilier.com' },
+    'Hiba Mellily': { phone: '438-465-0411', email: 'hiba@enduranceimmobilier.com' },
+    'Johnny Sfeir': { phone: '514-240-5353', email: 'johnny@enduranceimmobilier.com' },
+    'Louis-Victor Martin': { phone: '438-881-6681', email: 'louis-victor@enduranceimmobilier.com' },
+    'Martin Rodrigue': { phone: '514-791-6278', email: 'martin@enduranceimmobilier.com' },
+    'Remy Achache': { phone: '514-662-8455', email: 'remy@enduranceimmobilier.com' },
+    'Sophie Ma': { phone: '514-653-5688', email: 'sophie@enduranceimmobilier.com' }
+  };
+
+  // Domaine du formulaire de saisie client — fixe, rien à configurer ici.
+  var VISITE_LIBRE_DOMAIN = 'https://visite.egi.immo';
+
+  function buildUrl(domaine, adresse, mls, courtier, fiche) {
+    var base = (domaine || '').trim() || VISITE_LIBRE_DOMAIN;
+    var fields = { adresse: adresse, mls: mls, courtier: courtier };
+    if (fiche) fields.fiche = fiche;
+    var params = new URLSearchParams(fields);
+    return base + (base.indexOf('?') === -1 ? '?' : '&') + params.toString();
+  }
+
+  function renderQr(container, url, size) {
+    container.innerHTML = '';
+    new QRCode(container, { text: url, width: size, height: size, correctLevel: QRCode.CorrectLevel.M });
+  }
+
+  function renderList() {
+    if (!items.length) {
+      list.innerHTML = '<div class="empty">Aucune affiche générée pour l\'instant.</div>';
+      return;
+    }
+    list.innerHTML = '';
+    items.slice().reverse().forEach(function (item, idx) {
+      var row = document.createElement('div');
+      row.className = 'vl-row';
+      var qrDiv = document.createElement('div');
+      qrDiv.className = 'mini-qr';
+      row.appendChild(qrDiv);
+
+      var info = document.createElement('div');
+      info.className = 'info';
+      info.innerHTML = '<div class="a">' + item.adresse + '</div><div class="b">MLS ' + item.mls + ' — ' + item.courtier + '</div>';
+      row.appendChild(info);
+
+      var actions = document.createElement('div');
+      actions.className = 'row-actions';
+      var reBtn = document.createElement('button');
+      reBtn.textContent = 'Réafficher';
+      reBtn.addEventListener('click', function () { showSign(item); });
+      var copyBtn = document.createElement('button');
+      copyBtn.textContent = 'Copier';
+      copyBtn.addEventListener('click', function () {
+        navigator.clipboard.writeText(item.url).then(function () {
+          copyBtn.textContent = 'Copié !';
+          setTimeout(function () { copyBtn.textContent = 'Copier'; }, 1500);
+        });
+      });
+      actions.appendChild(reBtn);
+      actions.appendChild(copyBtn);
+      row.appendChild(actions);
+
+      list.appendChild(row);
+      renderQr(qrDiv, item.url, 56);
+    });
+  }
+
+  function showSign(item) {
+    currentUrl = item.url;
+    currentItem = item;
+    placeholder.style.display = 'none';
+    printSign.style.display = 'block';
+    signActions.style.display = 'flex';
+    document.getElementById('out-adresse').textContent = item.adresse;
+    document.getElementById('out-mls').textContent = 'MLS ' + item.mls;
+    document.getElementById('out-courtier').textContent = item.courtier;
+    var contact = COURTIER_CONTACTS[item.courtier];
+    var contactEl = document.getElementById('out-contact');
+    contactEl.innerHTML = contact
+      ? 'eXp Agence Immobilière<br>' + contact.phone + ' · ' + contact.email
+      : 'eXp Agence Immobilière';
+    var linkDisplay = document.getElementById('link-display');
+    if (linkDisplay) linkDisplay.value = item.url;
+    renderQr(qrTarget, item.url, 200);
+    var estAdresseGenerique = item.adresse === ('Propriété — MLS ' + item.mls);
+    document.getElementById('f-adresse').value = estAdresseGenerique ? '' : item.adresse;
+    document.getElementById('f-mls').value = item.mls;
+    document.getElementById('f-fiche').value = item.fiche || '';
+    if (item.fiche) { lockFicheIfFilled(); } else { showFicheEditable(); }
+    var select = document.getElementById('f-courtier');
+    var autre = document.getElementById('f-courtier-autre');
+    var match = Array.prototype.some.call(select.options, function (o) { return o.value === item.courtier; });
+    if (match) {
+      select.value = item.courtier;
+      autre.style.display = 'none';
+    } else {
+      select.value = '__autre__';
+      autre.style.display = 'block';
+      autre.value = item.courtier;
+    }
+  }
+
+  // ====== Verrouillage du champ "Lien vers l'annonce" après saisie ======
+  // Une fois rempli, le champ passe en affichage seul (pour vérification) —
+  // le bouton "Corriger" le redéverrouille au besoin.
+  var ficheInput = document.getElementById('f-fiche');
+  var ficheLocked = document.getElementById('fiche-locked');
+  var ficheLockedValue = document.getElementById('fiche-locked-value');
+
+  function lockFicheIfFilled() {
+    var v = ficheInput.value.trim();
+    if (!v) return;
+    ficheLockedValue.textContent = v;
+    ficheLockedValue.title = v;
+    ficheInput.style.display = 'none';
+    ficheLocked.style.display = 'flex';
+  }
+  function showFicheEditable() {
+    ficheLocked.style.display = 'none';
+    ficheInput.style.display = 'block';
+  }
+  function unlockFiche() {
+    showFicheEditable();
+    ficheInput.focus();
+    ficheInput.select();
+  }
+  ficheInput.addEventListener('blur', function () { setTimeout(lockFicheIfFilled, 120); });
+  document.getElementById('btn-fiche-corriger').addEventListener('click', unlockFiche);
+
+  var confirmBox = document.getElementById('confirm-box');
+  var pending = null;
+  var courtierSelect = document.getElementById('f-courtier');
+  var courtierAutre = document.getElementById('f-courtier-autre');
+
+  courtierSelect.addEventListener('change', function () {
+    courtierAutre.style.display = (courtierSelect.value === '__autre__') ? 'block' : 'none';
+    if (courtierSelect.value === '__autre__') courtierAutre.focus();
+  });
+
+  function resolveCourtier() {
+    return courtierSelect.value === '__autre__'
+      ? courtierAutre.value.trim()
+      : courtierSelect.value;
+  }
+
+  function setError(fieldId, hasError) {
+    document.getElementById(fieldId).classList.toggle('has-error', hasError);
+  }
+
+  function validate(adresse, mls, courtier) {
+    var ok = true;
+    // L'adresse est optionnelle — seul le MLS identifie la propriété dans
+    // FUB. Si elle est fournie, on s'assure juste qu'elle est plausible.
+    var adresseOk = adresse.length === 0 || adresse.length >= 6;
+    var mlsOk = /^\d{7,9}$/.test(mls);
+    var courtierFromList = courtierSelect.value !== '__autre__';
+    var courtierOk = !!courtier && (courtierFromList || courtier.trim().split(/\s+/).length >= 2);
+    setError('field-adresse', !adresseOk); if (!adresseOk) ok = false;
+    setError('field-mls', !mlsOk); if (!mlsOk) ok = false;
+    setError('field-courtier', !courtierOk); if (!courtierOk) ok = false;
+    return ok;
+  }
+
+  function adresseAffichee(adresse, mls) {
+    return adresse || ('Propriété — MLS ' + mls);
+  }
+
+  form.addEventListener('submit', function (e) {
+    e.preventDefault();
+    var adresse = document.getElementById('f-adresse').value.trim();
+    var mls = document.getElementById('f-mls').value.trim();
+    var courtier = resolveCourtier();
+    var fiche = document.getElementById('f-fiche').value.trim();
+
+    if (!validate(adresse, mls, courtier)) { confirmBox.style.display = 'none'; return; }
+
+    var adresseFinale = adresseAffichee(adresse, mls);
+    pending = { adresse: adresseFinale, mls: mls, courtier: courtier, fiche: fiche, domaine: VISITE_LIBRE_DOMAIN };
+    document.getElementById('confirm-adresse').textContent = adresseFinale;
+    document.getElementById('confirm-mls').textContent = mls;
+    document.getElementById('confirm-courtier').textContent = courtier;
+    var ficheRow = document.getElementById('confirm-fiche-row');
+    if (fiche) {
+      document.getElementById('confirm-fiche').textContent = fiche;
+      ficheRow.style.display = '';
+    } else {
+      ficheRow.style.display = 'none';
+    }
+    confirmBox.style.display = 'block';
+    confirmBox.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  });
+
+  document.getElementById('btn-modifier').addEventListener('click', function () {
+    confirmBox.style.display = 'none';
+    pending = null;
+  });
+
+  document.getElementById('btn-confirmer').addEventListener('click', function () {
+    if (!pending) return;
+    var url = buildUrl(pending.domaine, pending.adresse, pending.mls, pending.courtier, pending.fiche);
+    var item = { adresse: pending.adresse, mls: pending.mls, courtier: pending.courtier, fiche: pending.fiche, url: url };
+    items.push(item);
+    showSign(item);
+    renderList();
+    confirmBox.style.display = 'none';
+    pending = null;
+  });
+
+  // Champ lien manuel : sélection auto au focus/clic, pour un Ctrl/Cmd+C
+  // à la main si jamais les boutons ci-dessous échouent dans ce navigateur.
+  var linkDisplayEl = document.getElementById('link-display');
+  if (linkDisplayEl) {
+    ['focus', 'click'].forEach(function (evt) {
+      linkDisplayEl.addEventListener(evt, function () { linkDisplayEl.select(); });
+    });
+  }
+
+  function showCopyMsg(text) {
+    var el = document.getElementById('copy-msg');
+    if (!el) return;
+    el.textContent = text;
+    el.style.display = 'block';
+  }
+
+  // ====== Copier le lien ======
+  // navigator.clipboard peut être bloqué selon le contexte d'affichage de
+  // cette page ; on retombe sur document.execCommand('copy'), et en tout
+  // dernier recours on sélectionne le champ "Lien" pour un copier manuel.
+  document.getElementById('btn-copy').addEventListener('click', function (e) {
+    var btn = e.currentTarget;
+    var original = btn.textContent;
+    function done(ok) {
+      btn.textContent = ok ? 'Copié !' : 'Échec';
+      btn.classList.toggle('copied', ok);
+      showCopyMsg(ok ? '' : 'La copie automatique a échoué — le champ "Lien" ci-dessous est sélectionné, fais Ctrl+C (ou Cmd+C).');
+      if (!ok && linkDisplayEl) linkDisplayEl.select();
+      setTimeout(function () {
+        btn.textContent = original;
+        btn.classList.remove('copied');
+        if (ok) showCopyMsg('');
+      }, 2000);
+    }
+    function fallbackCopy() {
+      try {
+        if (!linkDisplayEl) { done(false); return; }
+        linkDisplayEl.select();
+        var ok = document.execCommand('copy');
+        done(ok);
+      } catch (err) {
+        done(false);
+      }
+    }
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(currentUrl).then(function () { done(true); }).catch(fallbackCopy);
+    } else {
+      fallbackCopy();
+    }
+  });
+
+  // ====== Imprimer / PDF ======
+  // window.print() est bloqué dans le bac à sable des Artifacts Claude où
+  // cette page est publiée. On génère donc un vrai PDF (capture de l'affiche
+  // + mise en page lettre) et on le propose en téléchargement via la
+  // capacité "downloads" de l'Artifact — le courtier l'imprime ensuite
+  // normalement depuis son ordinateur ou son téléphone.
+  document.getElementById('btn-print').addEventListener('click', async function () {
+    if (!currentItem) return;
+    var btn = this;
+    var original = btn.textContent;
+    btn.textContent = 'Génération du PDF…';
+    btn.disabled = true;
+    try {
+      var canvas = await html2canvas(printSign, { scale: 2, backgroundColor: '#ffffff' });
+      var imgData = canvas.toDataURL('image/png');
+      var jsPDF = window.jspdf.jsPDF;
+      var pdf = new jsPDF({ unit: 'pt', format: 'letter' });
+      var pageWidth = pdf.internal.pageSize.getWidth();
+      var pageHeight = pdf.internal.pageSize.getHeight();
+      var imgWidth = pageWidth - 60;
+      var imgHeight = imgWidth * canvas.height / canvas.width;
+      if (imgHeight > pageHeight - 60) {
+        imgHeight = pageHeight - 60;
+        imgWidth = imgHeight * canvas.width / canvas.height;
+      }
+      var x = (pageWidth - imgWidth) / 2;
+      var y = (pageHeight - imgHeight) / 2;
+      pdf.addImage(imgData, 'PNG', x, y, imgWidth, imgHeight);
+      var blob = pdf.output('blob');
+      var filename = 'affiche-visite-libre-MLS-' + currentItem.mls + '.pdf';
+      var downloads = (window.claude && window.claude.use) ? await window.claude.use('downloads') : null;
+      if (downloads) {
+        await downloads.save({ filename: filename, data: blob });
+        showCopyMsg('');
+      } else {
+        // Repli hors du bac à sable Artifact (page déployée sur visite.egi.immo) :
+        // téléchargement direct du PDF via un lien blob temporaire.
+        var blobUrl = URL.createObjectURL(blob);
+        var a = document.createElement('a');
+        a.href = blobUrl;
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        setTimeout(function () { URL.revokeObjectURL(blobUrl); }, 4000);
+        showCopyMsg('');
+      }
+    } catch (err) {
+      showCopyMsg('Erreur lors de la génération du PDF : ' + err.message);
+    } finally {
+      btn.textContent = original;
+      btn.disabled = false;
+    }
+  });
+
+  // ====== Portail d'accès équipe ======
+  // ⚠️ À REMPLACER : le code d'équipe de ton choix. Ce n'est pas une
+  // sécurité forte (le code est visible dans le code source de la page),
+  // seulement un frein pour qu'un lien partagé par erreur ne permette pas
+  // à n'importe qui de générer des visites libres au nom d'EGI.
+  var ACCESS_CODE = 'EGI-VL-2026';
+  var gate = document.getElementById('gate');
+  var mainContent = document.getElementById('main-content');
+  var gateInput = document.getElementById('gate-code');
+  var gateError = document.getElementById('gate-error');
+
+  function unlock() {
+    gate.style.display = 'none';
+    mainContent.style.display = 'block';
+  }
+
+  var alreadyUnlocked = false;
+  try { alreadyUnlocked = sessionStorage.getItem('vl_access_ok') === '1'; } catch (err) {}
+  if (alreadyUnlocked) {
+    unlock();
+  } else {
+    document.getElementById('gate-submit').addEventListener('click', function () {
+      if (gateInput.value === ACCESS_CODE) {
+        try { sessionStorage.setItem('vl_access_ok', '1'); } catch (err) {}
+        unlock();
+      } else {
+        gateError.style.display = 'block';
+        gateInput.value = '';
+        gateInput.focus();
+      }
+    });
+    gateInput.addEventListener('keydown', function (e) {
+      if (e.key === 'Enter') document.getElementById('gate-submit').click();
+    });
+    gateInput.focus();
+  }
+})();
+</script>
+
+</body></html>
