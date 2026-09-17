@@ -433,8 +433,10 @@
   var PROPERTY_URL_LOOKUP = 'https://enduranceimmobilier.com/wp-json/egi/v1/property-url';
 
   // Bulletin Indice Tardif du mois, prêt à imprimer en même temps que
-  // l'affiche — fichier statique, mis à jour manuellement chaque mois.
-  var INDICE_TARDIF_PDF_URL = 'https://visite.egi.immo/g-9fk2x7q/indice-tardif.pdf';
+  // l'affiche — hébergé sur Google Drive (dossier "Visite Libre" > "Indice
+  // Tardif - [mois]"), partagé en "Toute personne disposant du lien". À
+  // remplacer chaque mois par le lien du nouveau bulletin déposé dans Drive.
+  var INDICE_TARDIF_PDF_URL = 'https://drive.google.com/file/d/19JSpKg71-Y_7VqWl5_nVvBqsbYv5LVjv/view';
 
   function buildUrl(domaine, adresse, mls, courtier, fiche) {
     var base = (domaine || '').trim() || VISITE_LIBRE_DOMAIN;
