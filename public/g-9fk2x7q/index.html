@@ -184,6 +184,19 @@
   }
   .fiche-locked button:hover { border-color: var(--green); }
 
+  /* Lien vers l'annonce — recherche assistée */
+  .fiche-search-link {
+    display: inline-flex; align-items: center; gap: 6px; width: auto; margin: 2px 0 8px;
+    padding: 7px 12px; border-radius: 7px; border: 1px solid var(--accent); background: var(--accent-tint);
+    color: #6b4e1f; font-family: var(--font-body); font-weight: 600; font-size: 12.5px; cursor: pointer;
+  }
+  .fiche-search-link:hover { background: #ecd9ae; }
+  .fiche-search-msg { font-size: 12px; color: var(--green); margin-top: -4px; margin-bottom: 8px; }
+  .fiche-auto-status { font-size: 12.5px; margin: 0 0 8px; padding: 6px 10px; border-radius: 7px; }
+  .fiche-auto-status.loading { background: var(--surface-2); color: var(--ink-soft); }
+  .fiche-auto-status.found { background: var(--green-tint); color: var(--green-deep); }
+  .fiche-auto-status.notfound { background: var(--accent-tint); color: #6b4e1f; }
+
   /* Confirmation step */
   .confirm-box {
     background: var(--accent-tint); border: 1px solid var(--accent); border-radius: 10px;
@@ -311,12 +324,15 @@
         </dl>
         <div class="field" id="field-fiche" style="margin-top:2px;">
           <label>Lien vers l'annonce sur enduranceimmobilier.com</label>
+          <div class="fiche-auto-status" id="fiche-auto-status" style="display:none;"></div>
+          <button type="button" id="btn-fiche-chercher" class="fiche-search-link">🔍 Chercher cette propriété sur enduranceimmobilier.com</button>
           <input type="text" id="f-fiche" placeholder="https://enduranceimmobilier.com/proprietes/.../26759159/">
           <div class="fiche-locked" id="fiche-locked" style="display:none;">
             <span class="fiche-locked-value" id="fiche-locked-value"></span>
             <button type="button" id="btn-fiche-corriger">Corriger</button>
           </div>
-          <div class="hint">Le lien vers la PAGE de l'annonce sur le site (pas un PDF) — inclus en plus dans le courriel automatique, pour que le visiteur puisse voir l'annonce en ligne. Colle-le ici avant de confirmer.</div>
+          <div class="hint">Le lien vers la PAGE de l'annonce sur le site (pas un PDF) — inclus en plus dans le courriel automatique, pour que le visiteur puisse voir l'annonce en ligne. Trouvé automatiquement la plupart du temps — vérifie juste qu'il correspond avant de confirmer. Si la recherche automatique échoue (annonce pas encore synchronisée depuis Centris), clique « Chercher cette propriété » : ça copie l'adresse (ou le MLS) et ouvre la recherche du site dans un nouvel onglet — colle (Ctrl/Cmd+V), trouve l'annonce, ouvre-la, copie son lien, puis reviens le coller ci-dessous.</div>
+          <div class="fiche-search-msg" id="fiche-search-msg" style="display:none;"></div>
         </div>
         <div class="confirm-actions">
           <button type="button" id="btn-modifier">Modifier</button>
@@ -408,6 +424,13 @@
 
   // Domaine du formulaire de saisie client — fixe, rien à configurer ici.
   var VISITE_LIBRE_DOMAIN = 'https://visite.egi.immo';
+
+  // Recherche automatique du lien de l'annonce par numéro MLS — route
+  // ajoutée côté enduranceimmobilier.com (namespace egi/v1 déjà existant).
+  // Si le site n'a pas encore cette route (404 sur l'appel lui-même, pas
+  // sur la propriété), on retombe silencieusement sur la recherche
+  // manuelle ci-dessous — rien ne bloque le courtier dans les deux cas.
+  var PROPERTY_URL_LOOKUP = 'https://enduranceimmobilier.com/wp-json/egi/v1/property-url';
 
   // Bulletin Indice Tardif du mois, prêt à imprimer en même temps que
   // l'affiche — fichier statique, mis à jour manuellement chaque mois.
@@ -512,6 +535,43 @@
   ficheInput.addEventListener('blur', function () { setTimeout(lockFicheIfFilled, 120); });
   document.getElementById('btn-fiche-corriger').addEventListener('click', unlockFiche);
 
+  // ====== Chercher la propriété sur enduranceimmobilier.com ======
+  // Le site n'a pas d'URL de recherche pré-remplissable (le moteur est
+  // 100 % côté client, sans état dans l'URL) — impossible de construire un
+  // lien direct fiable vers l'annonce sans risquer une adresse mal formée.
+  // On copie donc l'adresse (ou le MLS à défaut) dans le presse-papiers et on
+  // ouvre la recherche du site dans un nouvel onglet : le courtier colle,
+  // trouve l'annonce en 2 clics, l'ouvre, copie son lien réel, puis revient
+  // le coller dans le champ ci-dessous avant de confirmer.
+  var ENDURANCE_PROPRIETES_URL = 'https://enduranceimmobilier.com/proprietes/';
+  var ficheSearchMsg = document.getElementById('fiche-search-msg');
+
+  function showFicheSearchMsg(text) {
+    if (!ficheSearchMsg) return;
+    ficheSearchMsg.textContent = text;
+    ficheSearchMsg.style.display = text ? 'block' : 'none';
+  }
+
+  document.getElementById('btn-fiche-chercher').addEventListener('click', function () {
+    if (!pending) return;
+    var query = (pending.adresse && pending.adresse.indexOf('Propriété — MLS') !== 0)
+      ? pending.adresse
+      : ('MLS ' + pending.mls);
+
+    function afterCopy(ok) {
+      window.open(ENDURANCE_PROPRIETES_URL, '_blank', 'noopener');
+      showFicheSearchMsg(ok
+        ? '« ' + query + ' » copié — colle-le (Ctrl/Cmd+V) dans la barre de recherche du nouvel onglet, ouvre l\'annonce, copie son lien, puis colle-le ci-dessous.'
+        : 'La copie automatique a échoué — tape simplement « ' + query + ' » dans la barre de recherche du nouvel onglet, ouvre l\'annonce, copie son lien, puis colle-le ci-dessous.');
+    }
+
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(query).then(function () { afterCopy(true); }).catch(function () { afterCopy(false); });
+    } else {
+      afterCopy(false);
+    }
+  });
+
   var confirmBox = document.getElementById('confirm-box');
   var pending = null;
   var courtierSelect = document.getElementById('f-courtier');
@@ -564,6 +624,43 @@
     document.getElementById('f-mls').focus();
   }
 
+  var ficheAutoStatus = document.getElementById('fiche-auto-status');
+  function setFicheAutoStatus(kind, text) {
+    if (!ficheAutoStatus) return;
+    if (!text) { ficheAutoStatus.style.display = 'none'; return; }
+    ficheAutoStatus.className = 'fiche-auto-status ' + kind;
+    ficheAutoStatus.textContent = text;
+    ficheAutoStatus.style.display = 'block';
+  }
+
+  // Cherche automatiquement le lien de l'annonce dès que le MLS est connu —
+  // le courtier n'a rien à faire quand ça fonctionne. On ignore toute
+  // réponse arrivée après que le courtier a changé de propriété entre-temps
+  // (mlsAtRequestTime !== la propriété toujours en attente).
+  function lookupFicheUrl(mls) {
+    setFicheAutoStatus('loading', '🔎 Recherche automatique du lien de l\'annonce…');
+    fetch(PROPERTY_URL_LOOKUP + '?mls=' + encodeURIComponent(mls))
+      .then(function (res) { return res.ok ? res.json() : null; })
+      .then(function (data) {
+        if (!pending || pending.mls !== mls) return; // le courtier a changé de propriété entre-temps
+        if (data && data.url) {
+          ficheInput.value = data.url;
+          lockFicheIfFilled();
+          setFicheAutoStatus('found', '✓ Lien trouvé automatiquement — vérifie qu\'il correspond bien avant de confirmer.');
+        } else {
+          setFicheAutoStatus('notfound', 'Pas trouvée automatiquement (probablement pas encore synchronisée depuis Centris) — utilise la recherche manuelle ci-dessous.');
+          showFicheEditable();
+          ficheInput.focus();
+        }
+      })
+      .catch(function () {
+        if (!pending || pending.mls !== mls) return;
+        setFicheAutoStatus('notfound', 'Recherche automatique indisponible pour l\'instant — utilise la recherche manuelle ci-dessous.');
+        showFicheEditable();
+        ficheInput.focus();
+      });
+  }
+
   form.addEventListener('submit', function (e) {
     e.preventDefault();
     var adresse = document.getElementById('f-adresse').value.trim();
@@ -577,13 +674,14 @@
     document.getElementById('confirm-adresse').textContent = adresseFinale;
     document.getElementById('confirm-mls').textContent = mls;
     document.getElementById('confirm-courtier').textContent = courtier;
-    // Le lien vers l'annonce se saisit ici, au moment de la vérification —
-    // pas dans le formulaire principal.
+    // Le lien vers l'annonce se cherche automatiquement ici, au moment de
+    // la vérification — la recherche manuelle ne sert que de filet de
+    // sécurité si l'automatique échoue.
     ficheInput.value = '';
     showFicheEditable();
     confirmBox.style.display = 'block';
     confirmBox.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-    ficheInput.focus();
+    lookupFicheUrl(mls);
   });
 
   document.getElementById('btn-modifier').addEventListener('click', function () {
