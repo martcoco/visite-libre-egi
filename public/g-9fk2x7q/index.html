@@ -401,6 +401,75 @@
   var currentUrl = '';
   var currentItem = null;
 
+  // ====== Historique partagé (persistant, toute l'équipe) ======
+  // Avant, "items" ne vivait qu'en mémoire du navigateur : perdu au
+  // refresh, jamais visible par un collègue. Il est maintenant lu/écrit
+  // via le même webhook Apps Script que le formulaire visiteur
+  // (public/index.html) : ajout par POST, lecture par JSONP (un simple
+  // fetch() cross-origin échoue -- Apps Script Web App ne renvoie pas
+  // d'en-têtes CORS, vérifié empiriquement). Le webhook filtre lui-même
+  // les propriétés qui ont disparu de enduranceimmobilier.com.
+  var WEBHOOK_URL = 'https://script.google.com/macros/s/AKfycbxRgjyKVqA8JzHZrzuS8kTTFY_DyfyGaCyb9Bm-bv2gdW8onsnHAfyKmqPaXZsd6lmN/exec';
+  var FORM_TOKEN = 'EGI-visite-2026-xyz';
+  var jsonpCounter = 0;
+  var historiquePollStarted = false;
+
+  function jsonp(url) {
+    return new Promise(function (resolve, reject) {
+      var cbName = '__vlHistoriqueCb' + (jsonpCounter++);
+      var script = document.createElement('script');
+      var timeout = setTimeout(function () { cleanup(); reject(new Error('timeout')); }, 8000);
+      function cleanup() {
+        delete window[cbName];
+        if (script.parentNode) script.parentNode.removeChild(script);
+        clearTimeout(timeout);
+      }
+      window[cbName] = function (data) { cleanup(); resolve(data); };
+      script.src = url + (url.indexOf('?') === -1 ? '?' : '&') + 'callback=' + cbName;
+      script.onerror = function () { cleanup(); reject(new Error('script error')); };
+      document.body.appendChild(script);
+    });
+  }
+
+  function loadHistorique() {
+    var url = WEBHOOK_URL + '?action=vl_historique&token=' + encodeURIComponent(FORM_TOKEN);
+    jsonp(url).then(function (data) {
+      if (data && data.ok && Array.isArray(data.items)) {
+        items = data.items.map(function (it) {
+          return {
+            adresse: it.adresse,
+            mls: it.mls,
+            courtier: it.courtier,
+            fiche: it.fiche,
+            url: it.urlGeneree || buildUrl(VISITE_LIBRE_DOMAIN, it.adresse, it.mls, it.courtier, it.fiche)
+          };
+        });
+        renderList();
+      }
+    }).catch(function (err) {
+      // Silencieux : ne bloque jamais l'usage du generateur si le partage
+      // est temporairement indisponible.
+      console.warn('Historique partage indisponible :', err.message);
+    });
+  }
+
+  function postHistoriqueEntry(item) {
+    fetch(WEBHOOK_URL, {
+      method: 'POST',
+      mode: 'no-cors',
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      body: JSON.stringify({
+        action: 'vl_historique_add',
+        token: FORM_TOKEN,
+        mls: item.mls,
+        adresse: item.adresse,
+        courtier: item.courtier,
+        fiche: item.fiche,
+        urlGeneree: item.url
+      })
+    }).catch(function () { /* best effort */ });
+  }
+
   // ====== Téléphone + courriel par courtier (source : FUB > Équipe) ======
   // Mise à jour manuelle si l'équipe change — demande à Claude de la
   // resynchroniser avec FUB au besoin.
@@ -697,6 +766,7 @@
     var url = buildUrl(pending.domaine, pending.adresse, pending.mls, pending.courtier, fiche);
     var item = { adresse: pending.adresse, mls: pending.mls, courtier: pending.courtier, fiche: fiche, url: url };
     items.push(item);
+    postHistoriqueEntry(item);
     showSign(item);
     renderList();
     confirmBox.style.display = 'none';
@@ -828,6 +898,14 @@
   function unlock() {
     gate.style.display = 'none';
     mainContent.style.display = 'block';
+    loadHistorique();
+    if (!historiquePollStarted) {
+      historiquePollStarted = true;
+      // Rafraîchissement périodique : si un collègue génère une visite
+      // libre pendant que cette page reste ouverte, la liste se met à
+      // jour toute seule sans qu'il faille recharger.
+      setInterval(loadHistorique, 60000);
+    }
   }
 
   var alreadyUnlocked = false;
